@@ -1,0 +1,31 @@
+name: Feature request
+description: Suggest something the dashboard should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: The situation, rather than the solution — it often has a simpler answer.
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you have in mind
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: writes
+    attributes:
+      label: Does this need to write to the database?
+      description: >
+        Today this app only reads (`df.*` read functions). Anything that acts on
+        an instance — cancel, signal, resubmit — needs pg_durable's write
+        surface and a more privileged role than a monitoring dashboard should
+        normally hold, so it's a bigger change than it looks.
+      options:
+        - label: This would need to cancel, signal, or otherwise modify a workflow
+        - label: Read-only, as far as I can tell

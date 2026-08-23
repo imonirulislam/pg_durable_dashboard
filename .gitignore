@@ -1,0 +1,18 @@
+node_modules/
+
+# Built output: server/dist from tsc, client/dist from vite build.
+dist/
+
+# Real connection strings; .env.example is the committed template.
+.env
+.env.local
+
+# Connection store and its generated encryption key. Never commit these.
+data/
+*.db
+*.db-wal
+*.db-shm
+*.key
+
+*.log
+.DS_Store

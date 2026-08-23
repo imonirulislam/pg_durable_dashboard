@@ -1,0 +1,17 @@
+**/node_modules
+**/dist
+**/data
+**/.env
+**/.env.local
+**/*.log
+
+.git
+.gitignore
+.github
+demo
+README.md
+Dockerfile
+docker-compose.yml
+.dockerignore
+**/.DS_Store
+docs

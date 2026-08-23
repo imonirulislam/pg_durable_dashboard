@@ -1,0 +1,91 @@
+name: Bug report
+description: Something in the dashboard doesn't work
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Found a security problem? Don't file it here — report it privately via
+        Security → Report a vulnerability. See `SECURITY.md`.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: And what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Select the workflow "..."
+        2. Click the third run
+        3. The graph shows...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: how
+    attributes:
+      label: How are you running it
+      options:
+        - Docker image (single container)
+        - docker compose
+        - npm run dev (server + client separately)
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: input
+    id: pg_durable
+    attributes:
+      label: pg_durable version
+      description: "`SELECT df.version();` or `SELECT extversion FROM pg_extension WHERE extname = 'pg_durable';`"
+      placeholder: "0.2.5"
+    validations:
+      required: true
+
+  - type: input
+    id: postgres
+    attributes:
+      label: Postgres version
+      placeholder: "17.10"
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: What role does the connection use
+      description: >
+        pg_durable applies row-level security scoped to
+        `submitted_by = current_user`, so a non-superuser only ever sees the
+        instances it started itself. If the list looks empty or short, this is
+        usually why.
+      options:
+        - Superuser
+        - Non-superuser role
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: sslmode
+    attributes:
+      label: TLS mode on the connection
+      options:
+        - disable
+        - require
+        - verify-ca
+        - verify-full
+        - Not applicable
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Server logs and browser console
+      description: >
+        Redact connection strings and passwords. The API logs the reason behind
+        most failures; the browser console catches the rest.
+      render: shell

@@ -1,0 +1,13 @@
+# Blank issues stay enabled — not everything fits a form.
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/imonirulislam/pg_durable_dashboard/security/advisories/new
+    about: >
+      Please report privately rather than in a public issue. This app holds
+      database credentials and has no authentication of its own.
+  - name: pg_durable itself
+    url: https://github.com/microsoft/pg_durable/issues
+    about: >
+      For problems with the extension rather than this dashboard — wrong
+      instance state, workflows not progressing, df.* functions erroring.

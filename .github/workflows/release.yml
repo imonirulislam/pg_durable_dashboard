@@ -1,0 +1,131 @@
+name: release
+
+# Publishes a multi-arch image to GHCR, signed with Sigstore keyless signing —
+# the identity is this workflow's OIDC token, so there is no private key to
+# store or rotate.
+#
+# Tag a release to publish:  git tag v0.1.0 && git push origin v0.1.0
+# Pushes to main publish an :edge tag for anyone tracking unreleased work.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Cheap gate: don't publish something that doesn't compile.
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        workspace: [server, client]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ${{ matrix.workspace }}/package-lock.json
+      - run: npm ci
+        working-directory: ${{ matrix.workspace }}
+      - run: npm run lint
+        working-directory: ${{ matrix.workspace }}
+      - run: npm run typecheck
+        working-directory: ${{ matrix.workspace }}
+      - run: npm test
+        working-directory: ${{ matrix.workspace }}
+      - run: npm run build
+        working-directory: ${{ matrix.workspace }}
+
+  publish:
+    needs: check
+    runs-on: ubuntu-latest
+    # Pull requests get built but never published — no credentials, no push.
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+      # Required for keyless signing: lets the job mint an OIDC token that
+      # cosign exchanges for a short-lived certificate.
+      id-token: write
+      attestations: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+      tags: ${{ steps.meta.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Native arm64 runners exist for public repos, but a two-platform buildx
+      # build via QEMU keeps this one job and is fast enough for an image this
+      # size.
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=edge,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+          labels: |
+            org.opencontainers.image.title=pg_durable dashboard
+            org.opencontainers.image.description=Web UI for the pg_durable Postgres extension
+            org.opencontainers.image.licenses=MIT
+
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # SLSA provenance and an SBOM, attached to the image so consumers can
+          # see how it was built and what is in it.
+          provenance: mode=max
+          sbom: true
+
+      - uses: sigstore/cosign-installer@v3
+
+      # Signs the digest rather than a tag: tags move, digests don't.
+      - name: Sign the image
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          cosign sign --yes \
+            "${REGISTRY}/${IMAGE_NAME}@${DIGEST}"
+
+      - name: Verification instructions
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          {
+            echo '### Published'
+            echo
+            echo "\`${REGISTRY}/${IMAGE_NAME}@${DIGEST}\`"
+            echo
+            echo 'Verify the signature before running it:'
+            echo
+            echo '```bash'
+            echo "cosign verify \\"
+            echo "  --certificate-identity-regexp '^https://github.com/${IMAGE_NAME}/.github/workflows/release.yml@' \\"
+            echo "  --certificate-oidc-issuer https://token.actions.githubusercontent.com \\"
+            echo "  ${REGISTRY}/${IMAGE_NAME}@${DIGEST}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
