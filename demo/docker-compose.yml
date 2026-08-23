@@ -1,0 +1,71 @@
+# Local pg_durable to develop the dashboard against:
+#
+#   docker compose -f demo/docker-compose.yml up -d --build
+#
+# Port 5440, to stay clear of anything already on 5432/5433. Point the API at it
+# with server/.env:
+#
+#   DATABASE_URL=postgresql://postgres:demo@localhost:5440/postgres
+#
+# Start over with a clean database (drops the demo instances):
+#
+#   docker compose -f demo/docker-compose.yml down -v
+services:
+  pg_durable:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pg-durable-dashboard-demo:pg17
+    container_name: pgdurable-demo
+    # The published image is amd64-only. On Apple Silicon it runs under
+    # emulation — slower to boot, fine for a demo.
+    platform: linux/amd64
+    environment:
+      POSTGRES_PASSWORD: demo
+      POSTGRES_DB: postgres
+    ports:
+      - '5440:5432'
+    volumes:
+      - pgdurable_data:/var/lib/postgresql/data
+    healthcheck:
+      # pg_isready alone is not enough: df.start() rejects work until the
+      # durable runtime has written its readiness sentinel.
+      test:
+        - CMD-SHELL
+        - >-
+          pg_isready -U postgres -d postgres -q &&
+          psql -U postgres -d postgres -tAc
+          "SELECT 1 FROM _duroxide._worker_ready" | grep -q 1
+      interval: 5s
+      timeout: 10s
+      retries: 40
+      start_period: 20s
+
+  # One-shot: starts the demo workflows once the runtime is accepting them, then
+  # exits. `docker compose up` again re-runs it and seeds another batch.
+  #
+  # Seeded three times on purpose: the UI groups instances by label into
+  # workflows with a strip of runs, and a single run per workflow makes that
+  # strip a single square. SEED_ROUNDS changes how many runs each workflow gets.
+  seed:
+    image: pg-durable-dashboard-demo:pg17
+    platform: linux/amd64
+    depends_on:
+      pg_durable:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: demo
+      SEED_ROUNDS: 3
+    entrypoint:
+      - sh
+      - -c
+      - >-
+        for i in $$(seq 1 $${SEED_ROUNDS}); do
+        echo "seed round $$i/$${SEED_ROUNDS}";
+        psql -h pg_durable -U postgres -d postgres -q -v ON_ERROR_STOP=1 -f /demo/seed.sql || exit 1;
+        sleep 2;
+        done
+    restart: 'no'
+
+volumes:
+  pgdurable_data:
