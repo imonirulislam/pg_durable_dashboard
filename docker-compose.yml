@@ -1,0 +1,49 @@
+# The dashboard as a single container. For a local pg_durable to point it at,
+# see demo/docker-compose.yml.
+#
+#   docker compose up -d --build
+#
+# Every setting below is optional and passed straight through from your shell or
+# a .env file next to this one; unset values stay unset and the app uses its own
+# defaults. Full table in the README.
+#
+# Published on loopback deliberately: this process holds database credentials
+# and has no authentication of its own. Put an authenticating proxy in front
+# before binding it anywhere else.
+services:
+  dashboard:
+    build:
+      context: .
+    image: pg-durable-dashboard:local
+    container_name: pg-durable-dashboard
+    ports:
+      - '${BIND_ADDRESS:-127.0.0.1}:${PORT:-4000}:4000'
+    env_file:
+      # Optional: keeps secrets out of this file and out of your shell history.
+      - path: .env
+        required: false
+    environment:
+      # Listed without values on purpose: compose passes each through only if
+      # it's actually set, rather than injecting an empty string. Full table in
+      # the README.
+      - DATABASE_URL
+      - ENV_CONNECTION_LABEL
+      - APP_SECRET
+      - CONNECTIONS_DB
+      - APP_SECRET_FILE
+      - ALLOWED_DB_HOSTS
+      - PGSSLROOTCERT
+      - CORS_ORIGIN
+      - CACHE_TTL_MS
+      - PG_POOL_MAX
+      - PG_STATEMENT_TIMEOUT_MS
+      - PG_QUERY_TIMEOUT_MS
+      - PG_CONNECT_TIMEOUT_MS
+    volumes:
+      # Connection store and generated key. Without this, saved connections are
+      # lost when the container is replaced.
+      - dashboard_data:/data
+    restart: unless-stopped
+
+volumes:
+  dashboard_data:
