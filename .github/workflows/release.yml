@@ -25,7 +25,7 @@ jobs:
       matrix:
         workspace: [server, client]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -58,7 +58,7 @@ jobs:
       digest: ${{ steps.build.outputs.digest }}
       tags: ${{ steps.meta.outputs.tags }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Native arm64 runners exist for public repos, but a two-platform buildx
       # build via QEMU keeps this one job and is fast enough for an image this
