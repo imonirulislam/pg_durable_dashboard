@@ -63,7 +63,7 @@ jobs:
       # Native arm64 runners exist for public repos, but a two-platform buildx
       # build via QEMU keeps this one job and is fast enough for an image this
       # size.
-      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@v4
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
