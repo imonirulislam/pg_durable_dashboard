@@ -64,7 +64,12 @@ export function summarize(node: InstanceNode): string | null {
     if (config.seconds != null) return `sleep ${String(config.seconds)}s`;
     if (config.cron_expr) return `cron ${String(config.cron_expr)}`;
     if (config.url) return `${String(config.method ?? 'POST')} ${String(config.url)}`;
-    if (config.condition_node) return 'branches on its condition';
+    if (config.condition_node) {
+      return node.node_type === 'LOOP'
+        ? 'runs while its condition holds'
+        : 'branches on its condition';
+    }
+    if (Array.isArray(config.extra_nodes)) return null;
     const first = Object.entries(config)[0];
     return first ? `${first[0]}: ${String(first[1])}` : null;
   }
@@ -94,7 +99,7 @@ export function buildTree(rawNodes: InstanceNode[]): {
   const childrenOf = (node: InstanceNode): Child[] => {
     const kids: Child[] = [];
     // Labels depend on the parent: order for THEN, branch for IF, concurrent
-    // for JOIN.
+    // for JOIN, body for LOOP.
     const labels: [string | null, string | null] =
       node.node_type === 'IF'
         ? ['then', 'else']
@@ -102,15 +107,34 @@ export function buildTree(rawNodes: InstanceNode[]): {
           ? ['1', '2']
           : node.node_type === 'JOIN' || node.node_type === 'RACE'
             ? ['∥', '∥']
-            : [null, null];
+            : node.node_type === 'LOOP'
+              ? ['body', 'body']
+              : [null, null];
 
-    const condition = parseQuery(node.query)?.condition_node;
+    // IF and the conditional form of LOOP both hide their condition the same
+    // way: a condition_node id inside query rather than left/right. The label
+    // is the only thing that differs by node type.
+    const config = parseQuery(node.query);
+    const condition = config?.condition_node;
     if (typeof condition === 'string' && byId.has(condition)) {
-      kids.push({ id: condition, label: 'if', dashed: true });
+      kids.push({
+        id: condition,
+        label: node.node_type === 'LOOP' ? 'while' : 'if',
+        dashed: true,
+      });
     }
     ([node.left_node, node.right_node] as const).forEach((id, i) => {
       if (id && byId.has(id)) kids.push({ id, label: labels[i] ?? null });
     });
+    // df.join3() (and any other N-ary operator) puts branches past the second
+    // in query.extra_nodes rather than left_node/right_node.
+    if (Array.isArray(config?.extra_nodes)) {
+      for (const id of config.extra_nodes) {
+        if (typeof id === 'string' && byId.has(id)) {
+          kids.push({ id, label: labels[1] ?? null });
+        }
+      }
+    }
     return kids;
   };
 

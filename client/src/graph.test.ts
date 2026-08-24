@@ -87,6 +87,55 @@ describe('buildTree', () => {
     expect(edges.map((e) => e.label)).toEqual(['∥', '∥']);
   });
 
+  it('connects df.join3\'s third branch, carried in query.extra_nodes', () => {
+    // Structure taken from a live pg_durable 0.2.5 instance: df.join3() records
+    // one JOIN node with left/right pointing at two branches and the third
+    // hidden in query.extra_nodes, the same pattern IF uses for condition_node.
+    const { nodes, edges } = buildTree([
+      node({
+        node_id: 'j3',
+        node_type: 'JOIN',
+        left_node: 'a',
+        right_node: 'b',
+        query: '{"extra_nodes":["c"]}',
+      }),
+      node({ node_id: 'a', query: 'SELECT 1' }),
+      node({ node_id: 'b', query: 'SELECT 2' }),
+      node({ node_id: 'c', query: 'SELECT 3' }),
+    ]);
+    expect(nodes.map((n) => n.id).sort()).toEqual(['a', 'b', 'c', 'j3']);
+    expect(edges.find((e) => e.source === 'j3' && e.target === 'c')).toMatchObject({
+      label: '∥',
+    });
+  });
+
+  it('labels a LOOP body distinctly from an unconditioned edge', () => {
+    const { edges } = buildTree([
+      node({ node_id: 'l', node_type: 'LOOP', left_node: 'body' }),
+      node({ node_id: 'body' }),
+    ]);
+    expect(edges[0]).toMatchObject({ source: 'l', target: 'body', label: 'body' });
+  });
+
+  it('connects the conditional form of LOOP and labels it while, not if', () => {
+    // Structure from a live pg_durable 0.2.5 instance: df.loop(body, condition)
+    // hides its condition the same way IF does, but "if" would misdescribe it.
+    const { nodes, edges } = buildTree([
+      node({
+        node_id: 'l',
+        node_type: 'LOOP',
+        left_node: 'body',
+        query: '{"condition_node":"cond"}',
+      }),
+      node({ node_id: 'body', query: 'SELECT 1' }),
+      node({ node_id: 'cond', query: 'SELECT count(*) > 0 FROM queue' }),
+    ]);
+    expect(nodes.map((n) => n.id).sort()).toEqual(['body', 'cond', 'l']);
+    const conditionEdge = edges.find((e) => e.target === 'cond');
+    expect(conditionEdge).toMatchObject({ source: 'l', label: 'while' });
+    expect(conditionEdge?.style?.strokeDasharray).toBeTruthy();
+  });
+
   it('puts children below their parent and left child left of right child', () => {
     const { nodes } = buildTree(docApproval);
     const at = (id: string) => nodes.find((n) => n.id === id)!.position;
@@ -185,6 +234,14 @@ describe('summarize', () => {
     expect(summarize(node({ node_id: 's', query: '{"condition_node":"abc"}' }))).toBe(
       'branches on its condition'
     );
+  });
+
+  it('describes a LOOP\'s condition differently from an IF\'s, same underlying key', () => {
+    expect(
+      summarize(
+        node({ node_id: 's', node_type: 'LOOP', query: '{"condition_node":"abc"}' })
+      )
+    ).toBe('runs while its condition holds');
   });
 
   it('collapses whitespace in SQL so it fits on two lines', () => {
