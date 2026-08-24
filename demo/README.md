@@ -30,21 +30,29 @@ rather than copying over it.
 
 ## What gets seeded
 
-`seed.sql` starts seven durable functions covering every status the UI renders,
-plus the graph shapes worth looking at. The compose seeder runs it **three
+`seed.sql` starts ten durable functions covering every status the UI renders,
+plus the graph shapes worth looking at — including the ones that turned up real
+rendering bugs once we actually ran them. The compose seeder runs it **three
 times** (`SEED_ROUNDS`), so each workflow has a few runs — the dashboard groups
 instances by label into workflows with a strip of runs, and one run per workflow
 makes that strip a single square.
 
-| label            | status    | why it's here                                        |
-| ---------------- | --------- | ---------------------------------------------------- |
-| `process-order`  | completed | linear pipeline, named results (`\|=>`) reused later |
-| `nightly-rollup` | completed | `df.join` fan-out/fan-in — a branch, not a line      |
-| `volume-check`   | completed | `df.if` — one branch taken, one left unreached       |
-| `charge-card`    | failed    | a step that raises; red node and failed counter      |
-| `doc-approval`   | running   | parked on `df.wait_for_signal` for a day             |
-| `heartbeat-30s`  | running   | `df.loop` + `df.sleep`; execution count keeps rising |
-| `stale-import`   | cancelled | started, then `df.cancel`                            |
+| label            | status    | why it's here                                              |
+| ---------------- | --------- | ----------------------------------------------------------- |
+| `process-order`  | completed | linear pipeline, named results (`\|=>`) reused later       |
+| `nightly-rollup` | completed | `df.join` fan-out/fan-in — a branch, not a line             |
+| `volume-check`   | completed | `df.if` — one branch taken, one left unreached              |
+| `charge-card`    | failed    | a step that raises; red node and failed counter             |
+| `doc-approval`   | running   | parked on `df.wait_for_signal` for a day                    |
+| `heartbeat-30s`  | running   | `df.loop` + `df.sleep`; execution count keeps rising        |
+| `stale-import`   | cancelled | started, then `df.cancel`                                   |
+| `nightly-close`  | completed | `df.join3` — a third branch hidden in `query.extra_nodes`, not left/right; missed until we ran one |
+| `failover-race`  | completed | `df.race` — two branches, both shown, edges marked concurrent |
+| `poll-loop`      | running   | `df.loop` with a condition — the *while*-loop form, distinct from `heartbeat-30s`'s unconditional one; the condition is hidden the same way `df.if`'s is |
+
+Also sets two variables via `df.setvar()` (`api_base`, `api_key`) so the
+dashboard's variables panel has something to show — `api_key` is masked there
+by name, `api_base` isn't; pg_durable itself makes no such distinction.
 
 `heartbeat-30s` is the one that makes the dashboard's 4s polling visibly do
 something. To watch a state transition, release the parked approval:

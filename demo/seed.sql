@@ -86,3 +86,44 @@ SELECT df.cancel(
   df.start(df.sleep(3600), 'stale-import'),
   'superseded by a rerun'
 ) AS stale_import;
+
+-- 8. completed — three-way join. df.join3() records one JOIN node with the
+--    third branch hidden in the node's query as {"extra_nodes": [...]}, the
+--    same trick df.if()'s condition uses — worth having a real example of.
+SELECT df.start(
+  df.join3(
+    'INSERT INTO playground.logs (msg) VALUES (''nightly: orders'')',
+    'INSERT INTO playground.logs (msg) VALUES (''nightly: documents'')',
+    'INSERT INTO playground.logs (msg) VALUES (''nightly: invoices'')'
+  ),
+  'nightly-close'
+) AS nightly_close;
+
+-- 9. completed — two branches racing; only the winner's side is meaningful.
+SELECT df.start(
+  df.race(
+    'INSERT INTO playground.logs (msg) VALUES (''primary region responded'')',
+    'INSERT INTO playground.logs (msg) VALUES (''fallback region responded'')'
+  ),
+  'failover-race'
+) AS failover_race;
+
+-- 10. running — a while-loop, not an unconditional one like heartbeat-30s.
+--     Condition is always-true on purpose: this exists to exercise the
+--     conditional-loop code path (LOOP's condition hidden in query the same
+--     way IF's is), not to model a real drain — a condition tied to another
+--     workflow's side effects would race it and could exit immediately.
+SELECT df.start(
+  df.loop(
+    'INSERT INTO playground.logs (msg) VALUES (''polling for work'')' ~> df.sleep(20),
+    'SELECT true'
+  ),
+  'poll-loop'
+) AS poll_loop;
+
+-- Config the workflows above would read via df.getvar() or {name}
+-- interpolation. api_key is masked in the dashboard's variables panel by
+-- name; api_base is not — pg_durable itself makes no such distinction, every
+-- value here is plaintext in df.vars.
+SELECT df.setvar('api_base', 'https://api.example.com');
+SELECT df.setvar('api_key', 'sk_demo_not_a_real_key');
