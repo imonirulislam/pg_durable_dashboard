@@ -93,7 +93,8 @@ code {
 
 .connection-picker button,
 .connection-actions button,
-.connection-form button {
+.connection-form button,
+.header-button {
   background: var(--surface);
   color: var(--text-muted);
   border: 1px solid var(--border);
@@ -106,7 +107,8 @@ code {
 
 .connection-picker button:hover,
 .connection-actions button:hover,
-.connection-form button:hover {
+.connection-form button:hover,
+.header-button:hover {
   color: var(--text);
   border-color: var(--text-muted);
 }
@@ -334,6 +336,31 @@ button.link {
   font-size: 11px;
   color: #f0a3a2;
   background: rgba(226, 75, 74, 0.1);
+}
+
+.vars-table {
+  width: 100%;
+  margin-top: 14px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.vars-table th {
+  text-align: left;
+  padding: 6px 8px;
+  color: var(--text-muted);
+  font-weight: 500;
+  border-bottom: 1px solid var(--border);
+}
+
+.vars-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.vars-masked {
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
 }
 
 .metrics-bar {

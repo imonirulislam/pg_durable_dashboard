@@ -7,6 +7,7 @@ import ConnectionPicker from './components/ConnectionPicker';
 import InstanceDetail from './components/InstanceDetail';
 import Logo from './components/Logo';
 import MetricsBar from './components/MetricsBar';
+import VariablesPanel from './components/VariablesPanel';
 import WorkflowList from './components/WorkflowList';
 
 // The only thing this app stores in the browser.
@@ -17,6 +18,7 @@ export default function App() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [managing, setManaging] = useState(false);
+  const [viewingVars, setViewingVars] = useState(false);
   const [target, setTarget] = useState<string | null>(() =>
     localStorage.getItem(TARGET_KEY)
   );
@@ -98,6 +100,11 @@ export default function App() {
           onSelect={switchTarget}
           onManage={() => setManaging(true)}
         />
+        {ready && (
+          <button type="button" className="header-button" onClick={() => setViewingVars(true)}>
+            variables
+          </button>
+        )}
         {metricsQuery.isError && (
           <span className="connection-error">{(metricsQuery.error as Error).message}</span>
         )}
@@ -148,6 +155,10 @@ export default function App() {
             if (id === target) setTarget(null);
           }}
         />
+      )}
+
+      {viewingVars && (
+        <VariablesPanel target={target} onClose={() => setViewingVars(false)} />
       )}
     </div>
   );

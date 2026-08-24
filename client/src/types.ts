@@ -111,6 +111,15 @@ export interface CreateConnectionResult {
   test: ConnectionTestResult;
 }
 
+export interface Variable {
+  name: string;
+  owner: string;
+  sensitive: boolean;
+  /** Null when sensitive — the server never sends the value in that case. */
+  value: string | null;
+  length: number;
+}
+
 /** Statuses an instance can't move on from, so polling them can slow right down. */
 export const TERMINAL_STATUSES = new Set(['completed', 'failed', 'cancelled']);
 

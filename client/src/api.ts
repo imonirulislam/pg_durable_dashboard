@@ -8,6 +8,7 @@ import type {
   InstanceNode,
   Metrics,
   NewConnection,
+  Variable,
 } from './types';
 
 const BASE = '/api';
@@ -80,4 +81,7 @@ export const api = {
     request<InstanceExecution[]>(
       `/instances/${encodeURIComponent(id)}/executions${query(target)}`
     ),
+
+  vars: (target: string | null) =>
+    request<{ variables: Variable[] }>(`/vars${query(target)}`),
 };

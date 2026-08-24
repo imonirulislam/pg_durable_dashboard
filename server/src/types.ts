@@ -70,6 +70,22 @@ export interface InstanceExecution {
   output: string | null;
 }
 
+/** df.vars — plaintext, no sensitivity flag of its own. See routes/vars.ts. */
+export interface VarRow {
+  name: string;
+  value: string;
+  owner: string;
+}
+
+export interface Variable {
+  name: string;
+  owner: string;
+  sensitive: boolean;
+  /** Null when sensitive — the value never leaves the server in that case. */
+  value: string | null;
+  length: number;
+}
+
 export interface InstanceListResponse {
   instances: InstanceSummary[];
   cursor: string | null;

@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { getPool } from '../connections/pools.js';
 import { defaultConnectionId, getConnection } from '../connections/store.js';
 import { cached, type CachedResult } from '../cache.js';
+import { queryParam } from '../params.js';
 import {
   HttpError,
   type InstanceExecution,
@@ -19,15 +20,9 @@ export const instancesRouter = Router();
 // worth closing here too.
 const MAX_LIMIT = 200;
 
-/** `?status[x]=y` parses to an object, and String() on it yields
- * "[object Object]" — which would reach Postgres as a filter. */
-function param(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 /** Falls back to the first connection, so callers can omit ?target. */
 function target(req: Request): string {
-  const requested = param(req.query.target) ?? defaultConnectionId();
+  const requested = queryParam(req.query.target) ?? defaultConnectionId();
 
   if (!requested) {
     throw new HttpError(
@@ -78,9 +73,9 @@ instancesRouter.get('/metrics', (req: Request, res: Response) =>
 instancesRouter.get('/instances', (req: Request, res: Response) => {
   const limit = Math.min(Number(req.query.limit) || 50, MAX_LIMIT);
   // status_filter is case-sensitive against lowercase stored statuses.
-  const statusFilter = param(req.query.status)?.toLowerCase() ?? null;
-  const labelFilter = param(req.query.label);
-  const cursor = param(req.query.cursor);
+  const statusFilter = queryParam(req.query.status)?.toLowerCase() ?? null;
+  const labelFilter = queryParam(req.query.label);
+  const cursor = queryParam(req.query.cursor);
 
   return send(
     res,
