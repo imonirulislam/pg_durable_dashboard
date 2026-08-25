@@ -17,6 +17,14 @@ interface Props {
   onSelectRun: (instanceId: string) => void;
 }
 
+// GraphPage (see main.tsx) reads these same two params straight from the URL —
+// there's no router, so this is the entire "link" between the two pages.
+function openGraphPage(target: string | null, instanceId: string): void {
+  const params = new URLSearchParams({ instance: instanceId });
+  if (target) params.set('target', target);
+  window.open(`${window.location.pathname}?${params}`, '_blank');
+}
+
 export default function InstanceDetail({
   target,
   workflow,
@@ -113,7 +121,15 @@ export default function InstanceDetail({
         </span>
       </h3>
 
-      <GraphOrCode nodes={nodesQuery.data ?? []} label={workflow.label} />
+      <GraphOrCode
+        nodes={nodesQuery.data ?? []}
+        label={workflow.label}
+        actions={
+          <button type="button" onClick={() => openGraphPage(target, instanceId)}>
+            open in new tab ↗
+          </button>
+        }
+      />
 
       <h3>execution history</h3>
       <table className="exec-table">

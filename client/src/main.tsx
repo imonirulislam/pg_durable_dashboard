@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
+import GraphPage from './components/GraphPage';
 import { pollInterval } from './polling';
 import 'reactflow/dist/style.css';
 import './styles.css';
@@ -17,10 +18,19 @@ const queryClient = new QueryClient({
   },
 });
 
+// No router: one graph opened in its own tab (see InstanceDetail's "open in
+// new tab") is the only other "page" this app has, so a URL param is enough.
+const params = new URLSearchParams(window.location.search);
+const instanceId = params.get('instance');
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
+      {instanceId ? (
+        <GraphPage instanceId={instanceId} target={params.get('target')} />
+      ) : (
+        <App />
+      )}
     </QueryClientProvider>
   </React.StrictMode>
 );
