@@ -49,9 +49,13 @@ describe('classifyWake', () => {
     expect(classifyWake(nodes, null)).toBeNull();
   });
 
-  it('falls back to a neutral label when a timer exists but no known waiting node does', () => {
-    const nodes = [node({ node_id: 'x', node_type: 'SQL', status: 'completed' })];
-    expect(classifyWake(nodes, '2026-01-01T00:00:00Z')?.kind).toBe('wake');
+  it('returns null when a timer row exists but nothing is actually waiting', () => {
+    // Real case, not hypothetical: pg_durable never removes a SIGNAL's
+    // timeout-timer row from _duroxide.orchestrator_queue once a real signal
+    // pre-empts it, so visibleAt stays non-null for a completed instance.
+    // Trusting it alone showed a "wakes in 14h" badge on a finished run.
+    const nodes = [node({ node_id: 'x', node_type: 'SIGNAL', status: 'completed' })];
+    expect(classifyWake(nodes, '2026-01-01T00:00:00Z')).toBeNull();
   });
 
   it('prefers inferred_status, consistent with how the graph reads status elsewhere', () => {

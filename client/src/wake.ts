@@ -1,6 +1,6 @@
 import type { InstanceNode } from './types';
 
-export type WakeKind = 'next-run' | 'next-tick' | 'timeout' | 'wake';
+export type WakeKind = 'next-run' | 'next-tick' | 'timeout';
 
 export interface WakeInfo {
   kind: WakeKind;
@@ -28,21 +28,28 @@ export function waitingNode(nodes: InstanceNode[]): InstanceNode | null {
   );
 }
 
-/** Combines the waiting node's type with the raw timestamp from the server. */
+/**
+ * Combines the waiting node's type with the raw timestamp from the server.
+ *
+ * Requires an actual running node of a waitable type, not just a non-null
+ * visibleAt — pg_durable never removes a SIGNAL's timeout-timer row from
+ * _duroxide.orchestrator_queue once a real signal pre-empts it, so that row
+ * (and its visible_at) lingers forever after the instance completes. Trusting
+ * visibleAt alone showed a "wakes in 14h" badge on an already-finished run.
+ */
 export function classifyWake(
   nodes: InstanceNode[],
   visibleAt: string | null
 ): WakeInfo | null {
   if (!visibleAt) return null;
   const node = waitingNode(nodes);
-  return { kind: node ? KIND_BY_NODE_TYPE[node.node_type]! : 'wake', at: visibleAt };
+  return node ? { kind: KIND_BY_NODE_TYPE[node.node_type]!, at: visibleAt } : null;
 }
 
 export const WAKE_LABEL: Record<WakeKind, string> = {
   'next-run': 'next run',
   'next-tick': 'next tick',
   timeout: 'times out',
-  wake: 'wakes',
 };
 
 /** "in 4m 12s" / "3m ago" for a timestamp that's usually in the future. */
