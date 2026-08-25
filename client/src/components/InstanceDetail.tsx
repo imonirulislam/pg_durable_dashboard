@@ -5,7 +5,7 @@ import { pollInstanceInfo, pollUnlessSettled } from '../polling';
 import { isTerminal } from '../types';
 import { classifyWake } from '../wake';
 import EmptyDetail from './EmptyDetail';
-import InstanceGraph from './InstanceGraph';
+import GraphOrCode from './GraphOrCode';
 import { LiveDuration, LiveRelativeTime, LiveWake } from './LiveTime';
 import RunStrip from './RunStrip';
 
@@ -113,7 +113,7 @@ export default function InstanceDetail({
         </span>
       </h3>
 
-      <InstanceGraph nodes={nodesQuery.data ?? []} />
+      <GraphOrCode nodes={nodesQuery.data ?? []} label={workflow.label} />
 
       <h3>execution history</h3>
       <table className="exec-table">

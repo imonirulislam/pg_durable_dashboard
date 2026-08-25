@@ -81,10 +81,64 @@ export function summarize(node: InstanceNode): string | null {
   return node.query ? node.query.replace(/\s+/g, ' ').trim() : null;
 }
 
-interface Child {
+export interface Child {
   id: string;
   label: string | null;
   dashed?: boolean;
+}
+
+/**
+ * The logical children of one node, in the order pg_durable evaluates them —
+ * shared by the graph layout and the reconstructed df.* code view, since both
+ * need the same left/right/condition_node/extra_nodes unpacking.
+ *
+ * An IF's (and conditional LOOP's) condition is a child held in its query
+ * JSON rather than in left_node/right_node; df.join3()'s third branch is
+ * likewise held in query.extra_nodes rather than left/right.
+ */
+export function logicalChildren(
+  node: InstanceNode,
+  byId: Map<string, InstanceNode>
+): Child[] {
+  const kids: Child[] = [];
+  // Labels depend on the parent: order for THEN, branch for IF, concurrent
+  // for JOIN, body for LOOP.
+  const labels: [string | null, string | null] =
+    node.node_type === 'IF'
+      ? ['then', 'else']
+      : node.node_type === 'THEN' || node.node_type === 'SEQ'
+        ? ['1', '2']
+        : node.node_type === 'JOIN' || node.node_type === 'RACE'
+          ? ['∥', '∥']
+          : node.node_type === 'LOOP'
+            ? ['body', 'body']
+            : [null, null];
+
+  // IF and the conditional form of LOOP both hide their condition the same
+  // way: a condition_node id inside query rather than left/right. The label
+  // is the only thing that differs by node type.
+  const config = parseQuery(node.query);
+  const condition = config?.condition_node;
+  if (typeof condition === 'string' && byId.has(condition)) {
+    kids.push({
+      id: condition,
+      label: node.node_type === 'LOOP' ? 'while' : 'if',
+      dashed: true,
+    });
+  }
+  ([node.left_node, node.right_node] as const).forEach((id, i) => {
+    if (id && byId.has(id)) kids.push({ id, label: labels[i] ?? null });
+  });
+  // df.join3() (and any other N-ary operator) puts branches past the second
+  // in query.extra_nodes rather than left_node/right_node.
+  if (Array.isArray(config?.extra_nodes)) {
+    for (const id of config.extra_nodes) {
+      if (typeof id === 'string' && byId.has(id)) {
+        kids.push({ id, label: labels[1] ?? null });
+      }
+    }
+  }
+  return kids;
 }
 
 /**
@@ -100,48 +154,7 @@ export function buildTree(rawNodes: InstanceNode[]): {
 } {
   const byId = new Map(rawNodes.map((n) => [n.node_id, n]));
   const childIds = new Set<string>();
-
-  const childrenOf = (node: InstanceNode): Child[] => {
-    const kids: Child[] = [];
-    // Labels depend on the parent: order for THEN, branch for IF, concurrent
-    // for JOIN, body for LOOP.
-    const labels: [string | null, string | null] =
-      node.node_type === 'IF'
-        ? ['then', 'else']
-        : node.node_type === 'THEN' || node.node_type === 'SEQ'
-          ? ['1', '2']
-          : node.node_type === 'JOIN' || node.node_type === 'RACE'
-            ? ['∥', '∥']
-            : node.node_type === 'LOOP'
-              ? ['body', 'body']
-              : [null, null];
-
-    // IF and the conditional form of LOOP both hide their condition the same
-    // way: a condition_node id inside query rather than left/right. The label
-    // is the only thing that differs by node type.
-    const config = parseQuery(node.query);
-    const condition = config?.condition_node;
-    if (typeof condition === 'string' && byId.has(condition)) {
-      kids.push({
-        id: condition,
-        label: node.node_type === 'LOOP' ? 'while' : 'if',
-        dashed: true,
-      });
-    }
-    ([node.left_node, node.right_node] as const).forEach((id, i) => {
-      if (id && byId.has(id)) kids.push({ id, label: labels[i] ?? null });
-    });
-    // df.join3() (and any other N-ary operator) puts branches past the second
-    // in query.extra_nodes rather than left_node/right_node.
-    if (Array.isArray(config?.extra_nodes)) {
-      for (const id of config.extra_nodes) {
-        if (typeof id === 'string' && byId.has(id)) {
-          kids.push({ id, label: labels[1] ?? null });
-        }
-      }
-    }
-    return kids;
-  };
+  const childrenOf = (node: InstanceNode): Child[] => logicalChildren(node, byId);
 
   rawNodes.forEach((n) => {
     childrenOf(n).forEach((c) => childIds.add(c.id));

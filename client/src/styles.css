@@ -753,11 +753,102 @@ button.link {
   color: var(--text-muted);
 }
 
+.view-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.view-tabs button {
+  background: none;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: var(--mono);
+  cursor: pointer;
+}
+
+.view-tabs button:hover {
+  color: var(--text);
+}
+
+.view-tabs button.active {
+  color: var(--text);
+  background: var(--surface-raised);
+  border-color: var(--text-muted);
+}
+
 .instance-graph {
   height: 340px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--surface);
+}
+
+.code-view {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.code-view-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.code-view-note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code-view-toolbar button {
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-family: var(--mono);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.code-view-toolbar button:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.code-view-source {
+  margin: 0;
+  padding: 10px 14px;
+  height: 340px;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.code-view-line {
+  white-space: pre;
+}
+
+.code-fn {
+  color: var(--accent);
+}
+
+.code-str {
+  color: #7fb87f;
 }
 
 /* Deep graphs don't fit in 340px at a readable zoom, so the view can be opened
