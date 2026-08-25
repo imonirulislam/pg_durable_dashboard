@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactFlow, {
   applyNodeChanges,
   Background,
@@ -18,11 +18,18 @@ import {
 } from '../graph';
 import type { InstanceNode } from '../types';
 
-function CustomNode({ data }: NodeProps<GraphNodeData>) {
+// Flash duration for the "this node's data just changed" pulse below.
+const PULSE_MS = 1200;
+
+interface RenderedNodeData extends GraphNodeData {
+  pulsing: boolean;
+}
+
+function CustomNode({ data }: NodeProps<RenderedNodeData>) {
   const color = statusColor(data.status);
   return (
     <div
-      className={`graph-node${data.dimmed ? ' dimmed' : ''}`}
+      className={`graph-node${data.dimmed ? ' dimmed' : ''}${data.pulsing ? ' pulse' : ''}`}
       style={{ borderColor: color }}
       title={data.tooltip}
     >
@@ -81,6 +88,43 @@ export default function InstanceGraph({ nodes: rawNodes }: Props) {
     );
   }, [layoutNodes]);
 
+  // A node whose status reads the same on every poll can still have done a
+  // full pending -> running -> completed loop in between, faster than the
+  // 4s poll caught it — updated_at moving is proof a poll saw real activity
+  // even when the visible status text didn't change. Flash it briefly so
+  // that isn't invisible.
+  const lastUpdatedAt = useRef(new Map<string, string | null>());
+  const [pulsing, setPulsing] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const changed: string[] = [];
+    layoutNodes.forEach((n) => {
+      const prev = lastUpdatedAt.current.get(n.id);
+      if (prev !== undefined && prev !== n.data.updatedAt) changed.push(n.id);
+      lastUpdatedAt.current.set(n.id, n.data.updatedAt);
+    });
+    if (changed.length === 0) return;
+
+    setPulsing((current) => new Set([...current, ...changed]));
+    const timer = setTimeout(() => {
+      setPulsing((current) => {
+        const next = new Set(current);
+        changed.forEach((id) => next.delete(id));
+        return next;
+      });
+    }, PULSE_MS);
+    return () => clearTimeout(timer);
+  }, [layoutNodes]);
+
+  const renderedNodes = useMemo(
+    () =>
+      nodes.map((n) => ({
+        ...n,
+        data: { ...n.data, pulsing: pulsing.has(n.id) },
+      })),
+    [nodes, pulsing]
+  );
+
   const onNodesChange = useCallback(
     (changes: NodeChange[]) =>
       setNodes((current) => applyNodeChanges(changes, current) as DurableNode[]),
@@ -111,7 +155,7 @@ export default function InstanceGraph({ nodes: rawNodes }: Props) {
       </div>
       <div className={`instance-graph${expanded ? ' expanded' : ''}`}>
         <ReactFlow
-          nodes={nodes}
+          nodes={renderedNodes}
           edges={edges}
           onNodesChange={onNodesChange}
           nodeTypes={NODE_TYPES}

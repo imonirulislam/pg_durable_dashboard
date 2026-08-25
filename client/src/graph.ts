@@ -24,6 +24,10 @@ export interface GraphNodeData {
   resultName: string | null;
   dimmed: boolean;
   tooltip: string;
+  /** Lets the graph flash a node when this changes between polls — a status
+   * that reads "running" on every poll can still mean real progress
+   * happened and reset in between, faster than the poll caught it. */
+  updatedAt: string | null;
 }
 
 export type DurableNode = Node<GraphNodeData, 'durable'>;
@@ -223,6 +227,7 @@ export function buildTree(rawNodes: InstanceNode[]): {
         status,
         summary: summarize(node),
         resultName: node.result_name,
+        updatedAt: node.updated_at,
         // Never-reached branches shouldn't compete with the live path.
         dimmed: status === 'pending' || status === 'skipped',
         tooltip: [

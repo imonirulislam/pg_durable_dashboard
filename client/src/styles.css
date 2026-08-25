@@ -962,6 +962,22 @@ button.link {
   opacity: 0.55;
 }
 
+/* A node can read "running" on every single poll while still having done a
+   full cycle in between (loop bodies, mainly) — this flash is proof a poll
+   just saw real activity, not just the same status text again. */
+.graph-node.pulse {
+  animation: graph-node-pulse 1.2s ease-out;
+}
+
+@keyframes graph-node-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(242, 166, 35, 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgba(242, 166, 35, 0);
+  }
+}
+
 .graph-node-head {
   display: flex;
   align-items: baseline;
