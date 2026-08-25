@@ -58,6 +58,9 @@ export interface InstanceExecution {
   event_count: string;
   duration_ms: string;
   output: string | null;
+  /** From an internal pg_durable table — null if that read failed. */
+  started_at: string | null;
+  completed_at: string | null;
 }
 
 export interface InstanceListResponse {

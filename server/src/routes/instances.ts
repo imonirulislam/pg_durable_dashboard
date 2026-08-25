@@ -141,11 +141,29 @@ instancesRouter.get('/instances/:id/executions', (req: Request, res: Response) =
       cached<InstanceExecution[]>(
         `${targetId}:executions:${req.params.id}:${limit}`,
         async () => {
-          const { rows } = await getPool(targetId).query<InstanceExecution>(
-            'SELECT * FROM df.instance_executions($1, $2)',
-            [req.params.id, limit]
-          );
-          return rows;
+          const pool = getPool(targetId);
+          // df.instance_executions() has no timestamp columns — when each
+          // tick happened lives only in _duroxide.executions, an undocumented
+          // internal table (see routes/wake.ts). Same join key, same risk: a
+          // pg_durable upgrade could rename or drop it, so fall back to the
+          // public function alone rather than break the whole route over it.
+          try {
+            const { rows } = await pool.query<InstanceExecution>(
+              `SELECT e.*, x.started_at, x.completed_at
+               FROM df.instance_executions($1, $2) e
+               LEFT JOIN _duroxide.executions x
+                 ON x.instance_id = $1 AND x.execution_id = e.execution_id
+               ORDER BY e.execution_id DESC`,
+              [req.params.id, limit]
+            );
+            return rows;
+          } catch {
+            const { rows } = await pool.query<Omit<InstanceExecution, 'started_at' | 'completed_at'>>(
+              'SELECT * FROM df.instance_executions($1, $2)',
+              [req.params.id, limit]
+            );
+            return rows.map((row) => ({ ...row, started_at: null, completed_at: null }));
+          }
         }
       ),
     req

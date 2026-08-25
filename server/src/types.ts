@@ -68,6 +68,9 @@ export interface InstanceExecution {
   event_count: string;
   duration_ms: string;
   output: string | null;
+  /** From _duroxide.executions — null if that internal table isn't readable. */
+  started_at: string | null;
+  completed_at: string | null;
 }
 
 /** df.vars — plaintext, no sensitivity flag of its own. See routes/vars.ts. */

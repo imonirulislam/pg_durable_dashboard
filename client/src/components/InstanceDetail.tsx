@@ -5,7 +5,7 @@ import { pollInstanceInfo, pollUnlessSettled } from '../polling';
 import { isTerminal } from '../types';
 import EmptyDetail from './EmptyDetail';
 import InstanceGraph from './InstanceGraph';
-import { LiveDuration } from './LiveTime';
+import { LiveDuration, LiveRelativeTime } from './LiveTime';
 import RunStrip from './RunStrip';
 
 interface Props {
@@ -101,6 +101,7 @@ export default function InstanceDetail({
         <thead>
           <tr>
             <th>execution</th>
+            <th>started</th>
             <th>status</th>
             <th>events</th>
             <th>duration (ms)</th>
@@ -112,6 +113,9 @@ export default function InstanceDetail({
               <td>
                 <code>{ex.execution_id}</code>
               </td>
+              <td title={ex.started_at ? new Date(ex.started_at).toLocaleString() : undefined}>
+                <LiveRelativeTime iso={ex.started_at} />
+              </td>
               <td>{ex.status}</td>
               <td>{ex.event_count}</td>
               <td>{ex.duration_ms}</td>
@@ -119,7 +123,7 @@ export default function InstanceDetail({
           ))}
           {(execQuery.data ?? []).length === 0 && (
             <tr>
-              <td colSpan={4} className="empty">
+              <td colSpan={5} className="empty">
                 no execution history yet.
               </td>
             </tr>
