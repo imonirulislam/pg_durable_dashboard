@@ -53,6 +53,11 @@ export function parseQuery(raw: string | null): Record<string, unknown> | null {
 
 /** One line of context under the node type — what this step actually does. */
 export function summarize(node: InstanceNode): string | null {
+  // SLEEP's query is a bare numeric string ("30"), not JSON — unlike every
+  // other operator. Checked live against a real SLEEP node to confirm.
+  if (node.node_type === 'SLEEP' && node.query && /^\d+$/.test(node.query.trim())) {
+    return `sleep ${node.query.trim()}s`;
+  }
   const config = parseQuery(node.query);
   if (config) {
     if (typeof config.signal_name === 'string') {
