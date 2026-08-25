@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { relativeTime, runDuration } from '../grouping';
 import type { InstanceSummary } from '../types';
+import { relativeToNow, WAKE_LABEL, type WakeInfo } from '../wake';
 
 /**
  * Nothing re-renders when only time passes, and a settled run polls every 30s —
@@ -23,4 +24,13 @@ export function LiveRelativeTime({ iso }: { iso: string | null }) {
 export function LiveDuration({ run }: { run: InstanceSummary }) {
   useTick();
   return <>{runDuration(run)}</>;
+}
+
+export function LiveWake({ wake }: { wake: WakeInfo }) {
+  useTick();
+  return (
+    <span className={`wake-badge wake-${wake.kind}`} title={new Date(wake.at).toLocaleString()}>
+      {WAKE_LABEL[wake.kind]} {relativeToNow(wake.at)}
+    </span>
+  );
 }

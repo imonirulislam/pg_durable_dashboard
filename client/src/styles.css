@@ -664,6 +664,20 @@ button.link {
   letter-spacing: 0;
 }
 
+.wake-badge {
+  font-family: var(--mono);
+}
+
+/* A timeout deadline reads as a warning; a recurring schedule doesn't. */
+.wake-timeout {
+  color: #f0c98a;
+}
+
+.wake-next-run,
+.wake-next-tick {
+  color: #8fd3b9;
+}
+
 .instance-detail {
   flex: 1;
   padding: 20px 24px;

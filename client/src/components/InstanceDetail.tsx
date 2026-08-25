@@ -3,9 +3,10 @@ import { api } from '../api';
 import type { Workflow } from '../grouping';
 import { pollInstanceInfo, pollUnlessSettled } from '../polling';
 import { isTerminal } from '../types';
+import { classifyWake } from '../wake';
 import EmptyDetail from './EmptyDetail';
 import InstanceGraph from './InstanceGraph';
-import { LiveDuration, LiveRelativeTime } from './LiveTime';
+import { LiveDuration, LiveRelativeTime, LiveWake } from './LiveTime';
 import RunStrip from './RunStrip';
 
 interface Props {
@@ -53,6 +54,18 @@ export default function InstanceDetail({
     placeholderData: keepPreviousData,
   });
 
+  // Only meaningful while running, and reads an internal pg_durable table —
+  // see routes/wake.ts. Never queried for a settled run.
+  const wakeQuery = useQuery({
+    queryKey: ['instance-wake', target, instanceId],
+    queryFn: () => api.instanceWake(target, instanceId!),
+    enabled: enabled && !settled,
+    refetchInterval: pollUnlessSettled(settled),
+    placeholderData: keepPreviousData,
+  });
+
+  const wake = classifyWake(nodesQuery.data ?? [], wakeQuery.data?.visibleAt ?? null);
+
   if (!workflow || !instanceId) {
     return <EmptyDetail workflowCount={workflowCount} />;
   }
@@ -89,6 +102,12 @@ export default function InstanceDetail({
             <>
               {' · '}
               <LiveDuration run={run} />
+            </>
+          )}
+          {wake && (
+            <>
+              {' · '}
+              <LiveWake wake={wake} />
             </>
           )}
         </span>

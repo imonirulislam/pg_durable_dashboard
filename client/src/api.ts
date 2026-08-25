@@ -82,6 +82,11 @@ export const api = {
       `/instances/${encodeURIComponent(id)}/executions${query(target)}`
     ),
 
+  instanceWake: (target: string | null, id: string) =>
+    request<{ visibleAt: string | null }>(
+      `/instances/${encodeURIComponent(id)}/wake${query(target)}`
+    ),
+
   vars: (target: string | null) =>
     request<{ variables: Variable[] }>(`/vars${query(target)}`),
 };

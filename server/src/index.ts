@@ -8,6 +8,7 @@ import { closeStore, defaultConnectionId, listConnections } from './connections/
 import { connectionsRouter } from './routes/connections.js';
 import { instancesRouter } from './routes/instances.js';
 import { varsRouter } from './routes/vars.js';
+import { wakeRouter } from './routes/wake.js';
 import { serveClient } from './static.js';
 
 const app = express();
@@ -52,6 +53,7 @@ app.get('/api/health', async (req: Request, res: Response) => {
 app.use('/api', connectionsRouter);
 app.use('/api', instancesRouter);
 app.use('/api', varsRouter);
+app.use('/api', wakeRouter);
 
 // Must come last: it claims every non-/api GET for the SPA.
 const clientDir = serveClient(app);
